@@ -1,0 +1,2 @@
+springdoc.api-docs.path: /openapi
+springdoc.swagger-ui.configUrl: /api-docs
