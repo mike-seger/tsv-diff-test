@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Zip File Diff</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.1/styles/github.min.css" />
+    <link rel="stylesheet" type="text/css"
+        href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css"/>
+
+<!--    <link rel="stylesheet" type="text/css" href="diff-dark.css" />-->
+<!--    <link rel="stylesheet" type="text/css" href="app-dark.css" />-->
+        <link rel="stylesheet" type="text/css" href="diff-dark.css" />
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
+
+    <script>
+        function showDiff(diffString) {
+            var targetElement = document.getElementById('diffBox')
+            var configuration = {
+                drawFileList: true,
+                fileListToggle: false,
+                fileListStartVisible: false,
+                fileContentToggle: false,
+                matching: 'lines',
+                outputFormat: 'side-by-side',
+                synchronisedScroll: true,
+                highlight: false,
+                renderNothingWhenEmpty: false,
+            }
+            var diff2htmlUi = new Diff2HtmlUI(targetElement, diffString, configuration)
+            diff2htmlUi.draw()
+            diff2htmlUi.highlightCode()
+        }
+
+        function uploadFiles(event) {
+            event.preventDefault()
+            var formData = new FormData()
+            formData.append('file1', document.getElementById('file1').files[0])
+            formData.append('file2', document.getElementById('file2').files[0])
+            formData.append('contextLines', 0)
+
+            fetch('http://localhost:8082/api/zipdiff', {
+//            fetch('api/zipdiff', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('result').textContent = data
+                showDiff(data)
+            })
+            .catch((error) => {
+                console.error('Error:', error)
+                document.getElementById('result').textContent = 'Error occurred'
+            });
+        }
+    </script>
+    <script>
+
+  </script>
+
+    <style>
+        body {
+            font-family: Verdana, Tahoma, Arial, sans-serif;
+        }
+
+        #diffBox {
+            margin-top: 16px;
+        }
+
+        #result {
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow: auto;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<h1>Diff Zip files</h1>
+<form onsubmit="uploadFiles(event)">
+    <label for="file1">Zip File 1:</label>
+    <input type="file" id="file1" name="file1" accept=".zip"><br>
+
+    <label for="file2">Zip File 2:</label>
+    <input type="file" id="file2" name="file2" accept=".zip"><br>
+
+    <br><input type="submit" value="Compare">
+</form>
+<div id="result"></div>
+<div id="diffBox"></div>
+</body>
+</html>
