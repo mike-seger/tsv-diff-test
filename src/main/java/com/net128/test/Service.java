@@ -51,7 +51,7 @@ public class Service {
 
 	public void cleanupTempDirs(Path ... tempDirs) {
 		if(cleanup) List.of(tempDirs).forEach(Service::deleteDirectory);
-		else log.debug("Not cleaning up: "+List.of(tempDirs));
+		else log.info("Not cleaning up: "+List.of(tempDirs));
 	}
 
 	public String performGitDiffOnFS(Path tempDir1, Path tempDir2, int contextLines) {
@@ -91,7 +91,7 @@ public class Service {
 				return diffResult;
 			}
 		} catch (IOException | GitAPIException e) {
-			e.printStackTrace();
+			log.error("Failed to perform git diff", e);
 			cleanupTempDirs(gitDir);
 			return null;
 		}
