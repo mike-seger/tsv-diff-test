@@ -6,8 +6,9 @@
     <link rel="stylesheet" type="text/css"
         href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css"/>
 
-    <!-- <link rel="stylesheet" type="text/css" href="diff-custom.css" />
-    <link rel="stylesheet" type="text/css" href="diff-dark.css" /> -->
+    <link rel="stylesheet" type="text/css" href="diff-custom.css" />
+    <link rel="stylesheet" type="text/css" href="diff-light.css" />
+    <!-- <link rel="stylesheet" type="text/css" href="diff-dark.css" /> -->
 
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
 
@@ -39,7 +40,7 @@
 
             const url = new URL(location.protocol + '//' + location.host);
             let endpoint = 'api/zipdiff'
-            if(url.hostname=='localhost' && url.port != 8082)) 
+            if(url.hostname=='localhost' && url.port != 8082) 
                 endpoint = 'http://localhost:8082/api/zipdiff'
             fetch(endpoint, { method: 'POST', body: formData })
             .then(response => response.text())
