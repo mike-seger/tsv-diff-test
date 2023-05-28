@@ -1,13 +1,15 @@
 :root {
     --diffdel-col:#cc3333;
     --diffdel-col2:#ffb6ba;
-    --diffdel-col3:#fee8e9;
+    --diffdel-col3:#ffe4e5;
     --diffadd-col: #399839;
     --diffadd-col2: #97f295;
     --diffadd-col3: #cef7d4;
     --diffbg-col: #ffffff;
-    --diffempty-col: #ececec;
     --diff-col: #000000;
-    --diffchnged-col: #c9a113;
+    --diffempty-col: #f4f4f4;
+    --diff-col-weak: #c6c6c6;
+    --diffchanged-col: #c9a113;
     --difflink-col: #3572b0;
+    --diffheaderbg-col: #cfe7ff;
 }
