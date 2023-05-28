@@ -41,10 +41,15 @@
         diff2htmlUi.draw()
     }
 
-    fetch("data/gitdiff.txt")
+    const urlParams = new URLSearchParams(window.location.search)
+    let gitDiff = urlParams.get('gitdiff')
+    if(!gitDiff || gitDiff.trim().length==0) gitDiff = "data/gitdiff.txt"
+
+    fetch(gitDiff)
         .then(response => response.text())
         .then(data => { showDiff(data)})
         .catch((error) => { alert('Error:', error) })
+        
 </script>
 </body>
 </html>

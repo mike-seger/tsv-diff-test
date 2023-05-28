@@ -3,4 +3,4 @@
 
 server.port: 8082
 
-com.net128.test.controller.cleanup: true
+com.net128.test.cleanup: true

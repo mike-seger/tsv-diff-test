@@ -18,7 +18,7 @@ dependencies {
 group = 'com.net128.test'
 version = '0.0.1-SNAPSHOT'
 description = 'tsv-diff-test'
-java.sourceCompatibility = JavaVersion.VERSION_17
+java.sourceCompatibility = JavaVersion.VERSION_11
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
