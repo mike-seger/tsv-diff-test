@@ -1,5 +1,6 @@
 package com.net128.test;
 
+import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.diff.DiffFormatter;
@@ -12,10 +13,12 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 @org.springframework.stereotype.Service
+@Slf4j
 public class Service {
 	public Service(@Value("${com.net128.test.cleanup:true}") boolean cleanup) {
 		this.cleanup = cleanup;
@@ -30,10 +33,7 @@ public class Service {
 			unzipFile(getClass().getResourceAsStream("/static/data/data"+id2+".zip"), tempDir2);
 			return performGitDiffOnFS(tempDir1, tempDir2, contextLines);
 		} finally {
-			if(cleanup) {
-				deleteDirectory(tempDir1);
-				deleteDirectory(tempDir2);
-			}
+			cleanupTempDirs(tempDir1, tempDir2);
 		}
 	}
 
@@ -45,11 +45,13 @@ public class Service {
 			unzipFile(input2, tempDir2);
 			return performGitDiffOnFS(tempDir1, tempDir2, contextLines);
 		} finally {
-			if(cleanup) {
-				deleteDirectory(tempDir1);
-				deleteDirectory(tempDir2);
-			}
+			cleanupTempDirs(tempDir1, tempDir2);
 		}
+	}
+
+	public void cleanupTempDirs(Path ... tempDirs) {
+		if(cleanup) List.of(tempDirs).forEach(Service::deleteDirectory);
+		else log.debug("Not cleaning up: "+List.of(tempDirs));
 	}
 
 	public String performGitDiffOnFS(Path tempDir1, Path tempDir2, int contextLines) {
@@ -90,28 +92,27 @@ public class Service {
 			}
 		} catch (IOException | GitAPIException e) {
 			e.printStackTrace();
-			if(cleanup) {
-				try { if (gitDir != null) deleteDirectory(gitDir); }
-				catch (IOException e2) { e2.printStackTrace(); }
-			}
+			cleanupTempDirs(gitDir);
 			return null;
 		}
 	}
 
-	private static void deleteDirectory(Path path) throws IOException {
-		Files.walkFileTree(path, new SimpleFileVisitor<>() {
-			@Override
-			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-				Files.delete(file);
-				return FileVisitResult.CONTINUE;
-			}
+	private static void deleteDirectory(Path path) {
+		try {
+			Files.walkFileTree(path, new SimpleFileVisitor<>() {
+				@Override
+				public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+					try { Files.delete(file); } catch (IOException e) { throw new RuntimeException(e); }
+					return FileVisitResult.CONTINUE;
+				}
 
-			@Override
-			public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-				Files.delete(dir);
-				return FileVisitResult.CONTINUE;
-			}
-		});
+				@Override
+				public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+					try { Files.delete(dir); } catch (IOException e) { throw new RuntimeException(e); }
+					return FileVisitResult.CONTINUE;
+				}
+			});
+		} catch (Exception e) { throw new RuntimeException(e); }
 	}
 
 	private static void copyDirectory(Path sourcePath, Path targetPath) throws IOException {
