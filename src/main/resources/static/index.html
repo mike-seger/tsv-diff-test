@@ -5,15 +5,17 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.1/styles/github.min.css" />
     <link rel="stylesheet" type="text/css"
           href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css"/>
-    <link rel="stylesheet" type="text/css" href="diff-custom.css" />
+    <link rel="stylesheet" type="text/css" href="diff-custom.css"/>
     <!-- <link rel="stylesheet" type="text/css" href="diff-light.css" /> -->
-    <link rel="stylesheet" type="text/css" href="diff-dark.css" />
+    <link rel="stylesheet" type="text/css" href="diff-dark.css" id="theme" />
 
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
 
     <style>
         body {
             font-family: Verdana, Tahoma, Arial, sans-serif;
+            color: var(--diff-col);
+            background-color: var(--diffbg-col);
         }
 
         #diffBox {
@@ -27,7 +29,7 @@
     function showDiff(diffString) {
         var targetElement = document.getElementById('diffBox')
         var configuration = {
-            drawFileList: false,
+            drawFileList: true,
             fileListToggle: false,
             fileListStartVisible: false,
             fileContentToggle: false,
@@ -45,11 +47,15 @@
     let gitDiff = urlParams.get('gitdiff')
     if(!gitDiff || gitDiff.trim().length==0) gitDiff = "data/gitdiff.txt"
 
+    let theme = urlParams.get('theme')
+    if(theme && theme.trim().length>0) 
+        document.getElementById('theme').href = theme+".css";
+
     fetch(gitDiff)
         .then(response => response.text())
         .then(data => { showDiff(data)})
         .catch((error) => { alert('Error:', error) })
-        
+
 </script>
 </body>
 </html>
