@@ -78,23 +78,51 @@
     })
 }
 
-async function generateDiff(dir1, dir2) {
+async function generateDiff(dir1, dir2, contextLines = 3) {
   const diff = [];
 
-  async function compareFiles(file1, file2) {
+  async function compareFiles(file1, file2, contextLines) {
   const content1 = await fs.promises.readFile(file1, { encoding: 'utf8' });
   const content2 = await fs.promises.readFile(file2, { encoding: 'utf8' });
 
   const diff = diffLines(content1, content2);
 
   let result = '';
+  let addedLines = 0;
+  let removedLines = 0;
 
   for (const part of diff) {
     if (part.added) {
+      if (removedLines > 0) {
+        result += `\\ No newline at end of file\n`;
+        removedLines = 0;
+      }
       result += `+${part.value}`;
+      addedLines++;
     } else if (part.removed) {
+      if (addedLines > 0) {
+        result += `\\ No newline at end of file\n`;
+        addedLines = 0;
+      }
       result += `-${part.value}`;
+      removedLines++;
+    } else {
+      if (addedLines > 0 || removedLines > 0) {
+        if (addedLines <= contextLines && removedLines <= contextLines) {
+          result += ` ${part.value}`;
+        } else {
+          //result += `\\ No newline at end of file\n`;
+          addedLines = 0;
+          removedLines = 0;
+        }
+      } else {
+        result += ` ${part.value}`;
+      }
     }
+  }
+
+  if (addedLines > 0 || removedLines > 0) {
+    result += `\\ No newline at end of file\n`;
   }
 
   if (result.length > 0) {
@@ -161,7 +189,7 @@ async function generateDiff(dir1, dir2) {
     if (stats1 && stats2 && stats1.isDirectory() && stats2.isDirectory()) {
       await compareDirectories(filepath1, filepath2);
     } else {
-      diff.push(await compareFiles(filepath1, filepath2));
+      diff.push(await compareFiles(filepath1, filepath2, contextLines));
     }
   }
 }
@@ -229,7 +257,7 @@ async function generateDiff(dir1, dir2) {
 
     //const diff = await gitDiff(commit1, commit2, dir)
     //const diff = await compareCommits(commit1, commit2, dir)
-    const diff = await generateDiff(dir1, dir2)
+    const diff = await generateDiff(dir1, dir2, 0)
     console.log("Git diff between the last two commits:", diff)
   }
 
