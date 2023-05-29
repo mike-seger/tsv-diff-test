@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Zip File Diff</title>
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.1/styles/github.min.css" />
+    <link rel="stylesheet" type="text/css"
+          href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css"/>
+    <link rel="stylesheet" type="text/css" href="diff-custom.css"/>
+    <link rel="stylesheet" type="text/css" href="diff-dark.css" id="theme" />
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script> -->
+
+    <script src="https://unpkg.com/@isomorphic-git/lightning-fs"></script>
+    <script src="https://unpkg.com/isomorphic-git@beta"></script></head>
+    <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.js"></script> -->
+<body>
+<div id="diffBox"></div>
+<div id="logs"></div>
+
+<script type="module">
+  import http from 'https://unpkg.com/isomorphic-git@beta/http/web/index.js';
+  //import * as JsDiff from 'https://cdn.skypack.dev/diff';
+  import { diffLines } from 'https://cdn.skypack.dev/diff@4.0.2';
+
+  const fs = new LightningFS('fs', {wipe: true});
+
+  async function gitInit(dir) {
+    await window.git.init({ fs, dir })  
+    console.log('Git repository initialized.')
+  }
+
+  async function gitCommitAllChanges(dir) {
+    await window.git.add({ fs, dir, filepath: '.' })
+    const author = { name: 'Diff', email: 'diff@any.com' }
+    const commit = await window.git.commit({
+        fs, dir, author, message: '...' })
+    console.log(`Committed as ${commit}`)
+    return commit
+  }
+
+    async function gitDiff(commitHash1, commitHash2, dir) {
+    return git.walk({
+        fs,
+        dir,
+        trees: [git.TREE({ ref: commitHash1 }), git.TREE({ ref: commitHash2 })],
+        map: async function(filepath, [A, B]) {
+        // ignore directories
+        if (filepath === '.') {
+            return
+        }
+        if ((await A.type()) === 'tree' || (await B.type()) === 'tree') {
+            return
+        }
+
+        // generate ids
+        const Aoid = await A.oid()
+        const Boid = await B.oid()
+
+        // determine modification type
+        let type = 'equal'
+        if (Aoid !== Boid) {
+            type = 'modify'
+        }
+        if (Aoid === undefined) {
+            type = 'add'
+        }
+        if (Boid === undefined) {
+            type = 'remove'
+        }
+        if (Aoid === undefined && Boid === undefined) {
+            console.log('Something weird happened:')
+            console.log(A)
+            console.log(B)
+        }
+
+        return `/${filepath}:${type}`    
+        },
+    })
+}
+
+async function generateDiff(dir1, dir2) {
+  const diff = [];
+
+  async function compareFiles(file1, file2) {
+  const content1 = await fs.promises.readFile(file1, { encoding: 'utf8' });
+  const content2 = await fs.promises.readFile(file2, { encoding: 'utf8' });
+
+  const diff = diffLines(content1, content2);
+
+  let result = '';
+
+  for (const part of diff) {
+    if (part.added) {
+      result += `+${part.value}`;
+    } else if (part.removed) {
+      result += `-${part.value}`;
+    }
+  }
+
+  if (result.length > 0) {
+    return result;
+  } else {
+    return null;
+  }
+}
+
+//   async function compareFiles(file1, file2) {
+//   const content1 = await fs.promises.readFile(file1, { encoding: 'utf8' });
+//   const content2 = await fs.promises.readFile(file2, { encoding: 'utf8' });
+
+//   const diff = Diff.diffLines(content1, content2);
+
+//   const diffLines = [];
+//   for (const part of diff) {
+//     if (part.added || part.removed) {
+//       diffLines.push(part.value);
+//     }
+//   }
+
+//   if (diffLines.length > 0) {
+//     return {
+//       file1,
+//       file2,
+//       diffLines,
+//     };
+//   } else {
+//     return null;
+//   }
+// }
+
+  async function checkFileExists(file) {
+    try {
+        await fs.promises.stat(file);
+        return true;
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+        return false;
+        }
+        throw error;
+    }
+  }
+
+  async function isDirectory(filepath) {
+    const stat = await fs.promises.stat(filepath);
+    return stat.isDirectory();
+  }
+
+  async function compareDirectories(dirPath1, dirPath2) {
+  const files1 = await fs.promises.readdir(dirPath1, { withFileTypes: true });
+  const files2 = await fs.promises.readdir(dirPath2, { withFileTypes: true });
+
+  const allFiles = new Set([...files1, ...files2]);
+
+  for (const filename of allFiles) {
+    const filepath1 = `${dirPath1}/${filename}`;
+    const filepath2 = `${dirPath2}/${filename}`;
+
+    const stats1 = await fs.promises.stat(filepath1).catch(() => null);
+    const stats2 = await fs.promises.stat(filepath2).catch(() => null);
+
+    if (stats1 && stats2 && stats1.isDirectory() && stats2.isDirectory()) {
+      await compareDirectories(filepath1, filepath2);
+    } else {
+      diff.push(await compareFiles(filepath1, filepath2));
+    }
+  }
+}
+
+  await compareDirectories(dir1, dir2);
+
+  return diff;
+}
+
+
+
+  async function zipExpandToGitDir(zipFileUrl, dir) {
+    const response = await fetch(zipFileUrl)
+    const zipFileBlob = await response.blob()
+
+    const jszip = new JSZip()
+    const zip = await jszip.loadAsync(zipFileBlob)
+
+    for (let filename in zip.files) {
+      const file = zip.files[filename]
+      if (file.dir) {
+        await fs.promises.mkdir(`${dir}/${file.name}`)
+      } else {
+        const content = await file.async("uint8array")
+        await fs.promises.writeFile(`${dir}/${file.name}`, content)
+      }
+    }
+    console.log("zipExpandToGitDir",zipFileUrl, dir)
+  }
+
+  async function clearDir(dir) {
+    const items = await fs.promises.readdir(dir);
+
+    for (let item of items) {
+      if (item === '.git') {
+        continue
+      }
+      const path = `${dir}/${item}`
+      const stats = await fs.promises.stat(path)
+
+      if (stats.isDirectory()) {
+        await clearDir(path)
+        await fs.promises.rmdir(path)
+      } else {
+        await fs.promises.unlink(path)
+      }
+    }
+    console.log("clearDir",dir)
+  }
+
+  async function main() {
+    const zipFileUrl1 = '../data/data1.zip'
+    const zipFileUrl2 = '../data/data2.zip'
+    const dir = '/gitdir'
+    const dir1 = '/v1'
+    const dir2 = '/v2'
+    await fs.promises.mkdir(dir1)
+    //await gitInit(dir)
+    await zipExpandToGitDir(zipFileUrl1, dir1)
+    //const commit1 = await gitCommitAllChanges(dir)
+    //await clearDir(dir)
+    await fs.promises.mkdir(dir2)
+    await zipExpandToGitDir(zipFileUrl2, dir2)
+    //const commit2 = await gitCommitAllChanges(dir)
+
+    //const diff = await gitDiff(commit1, commit2, dir)
+    //const diff = await compareCommits(commit1, commit2, dir)
+    const diff = await generateDiff(dir1, dir2)
+    console.log("Git diff between the last two commits:", diff)
+  }
+
+  main().catch(console.error)
+</script>
+</body>
+</html>
